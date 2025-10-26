@@ -14,14 +14,18 @@ async function initDB() {
   });
   await db.exec(`
     CREATE TABLE IF NOT EXISTS patients (
-      id INTEGER PRIMARY KEY AUTOINCREMENT,
-      name TEXT,
-      phone TEXT,
-      issueCategory TEXT,
-      issueDetails TEXT,
-      insuranceProvider TEXT,
-      email TEXT,
-      timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+     id INTEGER PRIMARY KEY AUTOINCREMENT,
+     firstName TEXT,
+     lastName TEXT,
+     dob TEXT,
+     phone TEXT,
+     email TEXT,
+     insuranceProvider TEXT,
+     location TEXT,
+     issueCategory TEXT,
+     issueDetail1 TEXT,
+     issueDetail2 TEXT,
+     timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
     )
   `);
 }
