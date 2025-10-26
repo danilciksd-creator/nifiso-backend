@@ -38,63 +38,122 @@ app.get("/", (req, res) => {
   res.send("Nifiso backend with DB + AI is running");
 });
 
+const sessions = {};
+
 app.post("/api/chat", async (req, res) => {
-  const userMessage = req.body.message;
-  const reply = await getAIReply(userMessage);
-  res.json({ reply });
-});
+  const { message, sessionId } = req.body;
+  if (!sessionId) return res.json({ reply: "Missing session ID" });
 
-app.post("/api/patient", async (req, res) => {
-  try {
-    const { name, phone, issueCategory, issueDetails, insuranceProvider, email } = req.body;
+  if (!sessions[sessionId]) {
+    sessions[sessionId] = {
+      step: 1,
+      data: {}
+    };
+  }
 
-    await db.run(
-      `INSERT INTO patients (name, phone, issueCategory, issueDetails, insuranceProvider, email)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-      [name, phone, issueCategory, issueDetails, insuranceProvider, email]
-    );
+  const session = sessions[sessionId];
 
-    res.status(201).json({ message: "Stored successfully" });
-  } catch (err) {
-    console.error("DB error:", err);
-    res.status(500).json({ error: "Database error" });
+  switch (session.step) {
+    case 1:
+      session.step++;
+      return res.json({
+        reply: "What is your dental issue?",
+        options: [
+          "Tooth pain / sensitivity",
+          "Broken or chipped tooth",
+          "Swelling or infection",
+          "Aesthetic treatment",
+          "Routine check-up / cleaning"
+        ]
+      });
+
+    case 2:
+      session.data.issueCategory = message;
+      session.step++;
+      return res.json({
+        reply: "Which side?",
+        options: ["Left", "Right", "Both"]
+      });
+
+    case 3:
+      session.data.issueDetail1 = message;
+      session.step++;
+      return res.json({
+        reply: "How long has this been happening? (e.g. 2 days)"
+      });
+
+    case 4:
+      session.data.issueDetail2 = message;
+      session.step++;
+      return res.json({ reply: "First name:" });
+
+    case 5:
+      session.data.firstName = message;
+      session.step++;
+      return res.json({ reply: "Last name:" });
+
+    case 6:
+      session.data.lastName = message;
+      session.step++;
+      return res.json({ reply: "Mobile number:" });
+
+    case 7:
+      session.data.phone = message;
+      session.step++;
+      return res.json({ reply: "Date of birth (YYYY-MM-DD):" });
+
+    case 8:
+      session.data.dob = message;
+      session.step++;
+      return res.json({
+        reply: "Do you have insurance?",
+        options: ["AXA", "Daman", "Thiqa", "Other", "No insurance"]
+      });
+
+    case 9:
+      session.data.insuranceProvider = message;
+      session.step++;
+      return res.json({ reply: "Email (optional): or type 'no'" });
+
+    case 10:
+      session.data.email = message.toLowerCase() === "no" ? "" : message;
+      session.step++;
+      return res.json({ reply: "Which area of Dubai are you in?" });
+
+    case 11:
+      session.data.location = message;
+      session.step++;
+
+      await db.run(
+        `INSERT INTO patients 
+        (firstName,lastName,phone,dob,email,insuranceProvider,location,
+        issueCategory,issueDetail1,issueDetail2)
+        VALUES (?,?,?,?,?,?,?,?,?,?)`,
+        [
+          session.data.firstName,
+          session.data.lastName,
+          session.data.phone,
+          session.data.dob,
+          session.data.email,
+          session.data.insuranceProvider,
+          session.data.location,
+          session.data.issueCategory,
+          session.data.issueDetail1,
+          session.data.issueDetail2
+        ]
+      );
+
+      return res.json({
+        reply:
+          `Thank you ${session.data.firstName}, our dental team will contact you shortly.`
+      });
+
+    default:
+      return res.json({ reply: "Please refresh to start again." });
   }
 });
 
-async function getAIReply(message) {
-  const apiKey = process.env.OPENAI_API_KEY;
 
-  const prompt = `
-You are Nifiso, a medical intake assistant for Dubai clinics.
-Rules:
-1. First ask the patient what type of issue they have (provide selectable options).
-2. Then collect details: location, pain type, duration.
-3. Then collect: Name + Phone + (optional Email).
-4. Then briefly summarize and say a doctor will contact them.
-5. Never give medical advice, only intake info.
-
-Patient says: "${message}"
-`;
-
-  const response = await fetch("https://api.openai.com/v1/chat/completions", {
-    method: "POST",
-    headers: {
-      "Authorization": `Bearer ${apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: prompt },
-        { role: "user", content: message }
-      ],
-      temperature: 0.6
-    })
-  });
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || "Please repeat.";
-}
 
 const PORT = process.env.PORT || 3000;
 
