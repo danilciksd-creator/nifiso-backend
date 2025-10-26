@@ -153,6 +153,33 @@ app.post("/api/chat", async (req, res) => {
   }
 });
 
+// Simple admin auth (static login for MVP)
+const adminUser = {
+  username: "admin",
+  password: "nifiso123" // später env-var/ hashed
+};
+
+app.post("/api/admin/login", (req, res) => {
+  const { username, password } = req.body;
+  if (
+    username === adminUser.username &&
+    password === adminUser.password
+  ) {
+    return res.json({ success: true });
+  }
+  res.status(401).json({ success: false });
+});
+
+app.get("/api/admin/patients", async (req, res) => {
+  try {
+    const data = await db.all("SELECT * FROM patients ORDER BY timestamp DESC");
+    res.json(data);
+  } catch (err) {
+    res.status(500).json({ error: "DB error" });
+  }
+});
+
+
 
 
 const PORT = process.env.PORT || 3000;
