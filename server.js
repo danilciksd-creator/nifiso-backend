@@ -54,103 +54,133 @@ app.post("/api/chat", async (req, res) => {
   const session = sessions[sessionId];
 
   switch (session.step) {
-    case 1:
-      session.step++;
+  case 1:
+    session.step++;
+    if (lang === "ar") {
       return res.json({
-        reply: "What is your dental issue?",
+        reply: "ما هي المشكلة السنية التي تعاني منها؟",
         options: [
-          "Tooth pain / sensitivity",
-          "Broken or chipped tooth",
-          "Swelling or infection",
-          "Aesthetic treatment",
-          "Routine check-up / cleaning"
+          "ألم أو حساسية في الأسنان",
+          "سن مكسور أو متشقق",
+          "تورم أو التهاب",
+          "علاج تجميلي",
+          "فحص وتنظيف روتيني"
         ]
       });
+    }
+    return res.json({
+      reply: "What is your dental issue?",
+      options: [
+        "Tooth pain / sensitivity",
+        "Broken or chipped tooth",
+        "Swelling or infection",
+        "Aesthetic treatment",
+        "Routine check-up / cleaning"
+      ]
+    });
 
-    case 2:
-      session.data.issueCategory = message;
-      session.step++;
+  case 2:
+    session.data.issueCategory = message;
+    session.step++;
+    if (lang === "ar") {
       return res.json({
-        reply: "Which side?",
-        options: ["Left", "Right", "Both"]
+        reply: "أي جهة؟",
+        options: ["اليسار", "اليمين", "كلاهما"]
       });
+    }
+    return res.json({
+      reply: "Which side?",
+      options: ["Left", "Right", "Both"]
+    });
 
-    case 3:
-      session.data.issueDetail1 = message;
-      session.step++;
+  case 3:
+    session.data.issueDetail1 = message;
+    session.step++;
+    if (lang === "ar") {
       return res.json({
-        reply: "How long has this been happening? (e.g. 2 days)"
+        reply: "منذ متى وأنت تعاني من هذه المشكلة؟ (مثال: يومان)"
       });
+    }
+    return res.json({
+      reply: "How long has this been happening? (e.g. 2 days)"
+    });
 
-    case 4:
-      session.data.issueDetail2 = message;
-      session.step++;
-      return res.json({ reply: "First name:" });
+  case 4:
+    session.data.issueDetail2 = message;
+    session.step++;
+    return res.json({ reply: lang === "ar" ? "الاسم الأول:" : "First name:" });
 
-    case 5:
-      session.data.firstName = message;
-      session.step++;
-      return res.json({ reply: "Last name:" });
+  case 5:
+    session.data.firstName = message;
+    session.step++;
+    return res.json({ reply: lang === "ar" ? "اسم العائلة:" : "Last name:" });
 
-    case 6:
-      session.data.lastName = message;
-      session.step++;
-      return res.json({ reply: "Mobile number:" });
+  case 6:
+    session.data.lastName = message;
+    session.step++;
+    return res.json({ reply: lang === "ar" ? "رقم الهاتف:" : "Mobile number:" });
 
-    case 7:
-      session.data.phone = message;
-      session.step++;
-      return res.json({ reply: "Date of birth (YYYY-MM-DD):" });
+  case 7:
+    session.data.phone = message;
+    session.step++;
+    return res.json({ reply: lang === "ar" ? "تاريخ الميلاد (YYYY-MM-DD):" : "Date of birth (YYYY-MM-DD):" });
 
-    case 8:
-      session.data.dob = message;
-      session.step++;
+  case 8:
+    session.data.dob = message;
+    session.step++;
+    if (lang === "ar") {
       return res.json({
-        reply: "Do you have insurance?",
-        options: ["AXA", "Daman", "Thiqa", "Other", "No insurance"]
+        reply: "هل لديك تأمين صحي؟",
+        options: ["أكسا", "ضمان", "ثيقة", "أخرى", "بدون تأمين"]
       });
+    }
+    return res.json({
+      reply: "Do you have insurance?",
+      options: ["AXA", "Daman", "Thiqa", "Other", "No insurance"]
+    });
 
-    case 9:
-      session.data.insuranceProvider = message;
-      session.step++;
-      return res.json({ reply: "Email (optional): or type 'no'" });
+  case 9:
+    session.data.insuranceProvider = message;
+    session.step++;
+    return res.json({ reply: lang === "ar" ? "البريد الإلكتروني (اختياري): أو اكتب 'لا'" : "Email (optional): or type 'no'" });
 
-    case 10:
-      session.data.email = message.toLowerCase() === "no" ? "" : message;
-      session.step++;
-      return res.json({ reply: "Which area of Dubai are you in?" });
+  case 10:
+    session.data.email = message.toLowerCase() === "no" ? "" : message;
+    session.step++;
+    return res.json({ reply: lang === "ar" ? "في أي منطقة من دبي؟" : "Which area of Dubai are you in?" });
 
-    case 11:
-      session.data.location = message;
-      session.step++;
+  case 11:
+    session.data.location = message;
+    session.step++;
 
-      await db.run(
-        `INSERT INTO patients 
-        (firstName,lastName,phone,dob,email,insuranceProvider,location,
-        issueCategory,issueDetail1,issueDetail2)
-        VALUES (?,?,?,?,?,?,?,?,?,?)`,
-        [
-          session.data.firstName,
-          session.data.lastName,
-          session.data.phone,
-          session.data.dob,
-          session.data.email,
-          session.data.insuranceProvider,
-          session.data.location,
-          session.data.issueCategory,
-          session.data.issueDetail1,
-          session.data.issueDetail2
-        ]
-      );
+    await db.run(
+      `INSERT INTO patients 
+      (firstName,lastName,phone,dob,email,insuranceProvider,location,
+      issueCategory,issueDetail1,issueDetail2)
+      VALUES (?,?,?,?,?,?,?,?,?,?)`,
+      [
+        session.data.firstName,
+        session.data.lastName,
+        session.data.phone,
+        session.data.dob,
+        session.data.email,
+        session.data.insuranceProvider,
+        session.data.location,
+        session.data.issueCategory,
+        session.data.issueDetail1,
+        session.data.issueDetail2
+      ]
+    );
 
-      return res.json({
-        reply:
-          `Thank you ${session.data.firstName}, our dental team will contact you shortly.`
-      });
+    return res.json({
+      reply: lang === "ar"
+        ? `شكرًا لك ${session.data.firstName}، سيتواصل فريق الأسنان لدينا معك قريبًا.`
+        : `Thank you ${session.data.firstName}, our dental team will contact you shortly.`
+    });
 
-    default:
-      return res.json({ reply: "Please refresh to start again." });
-  }
+  default:
+    return res.json({ reply: lang === "ar" ? "يرجى التحديث للبدء من جديد." : "Please refresh to start again." });
+}
 });
 
 // Simple admin auth (static login for MVP)
