@@ -41,7 +41,7 @@ app.get("/", (req, res) => {
 const sessions = {};
 
 app.post("/api/chat", async (req, res) => {
-  const { message, sessionId } = req.body;
+  const { message, sessionId, lang = "en" } = req.body;
   if (!sessionId) return res.json({ reply: "Missing session ID" });
 
   if (!sessions[sessionId]) {
