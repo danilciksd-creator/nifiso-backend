@@ -38,8 +38,6 @@ app.get("/", (req, res) => {
   res.send("Nifiso backend with DB + AI is running");
 });
 
-const sessions = {};
-
 app.post("/api/chat", async (req, res) => {
   const { message, sessionId, lang = "en" } = req.body;
   if (!sessionId) return res.json({ reply: "Missing session ID" });
@@ -52,136 +50,149 @@ app.post("/api/chat", async (req, res) => {
   }
 
   const session = sessions[sessionId];
+  const t = (en, ar) => (lang === "ar" ? ar : en);
 
   switch (session.step) {
-  case 1:
-    session.step++;
-    if (lang === "ar") {
+    case 1:
+      session.step++;
       return res.json({
-        reply: "ما هي المشكلة السنية التي تعاني منها؟",
+        reply: t("What is your dental issue?", "ما هي مشكلتك السنية؟"),
         options: [
-          "ألم أو حساسية في الأسنان",
-          "سن مكسور أو متشقق",
-          "تورم أو التهاب",
-          "علاج تجميلي",
-          "فحص وتنظيف روتيني"
+          t("Tooth pain / sensitivity", "ألم أو حساسية في الأسنان"),
+          t("Broken or chipped tooth", "كسر أو تشقق في السن"),
+          t("Swelling or infection", "تورم أو التهاب"),
+          t("Aesthetic treatment", "علاج تجميلي"),
+          t("Routine check-up / cleaning", "فحص روتيني / تنظيف")
         ]
       });
-    }
-    return res.json({
-      reply: "What is your dental issue?",
-      options: [
-        "Tooth pain / sensitivity",
-        "Broken or chipped tooth",
-        "Swelling or infection",
-        "Aesthetic treatment",
-        "Routine check-up / cleaning"
-      ]
-    });
 
-  case 2:
-    session.data.issueCategory = message;
-    session.step++;
-    if (lang === "ar") {
+    case 2:
+      session.data.issueCategory = message;
+      session.step++;
+
+      if (
+        /pain|sensitivity|swelling|infection|chipped/i.test(
+          session.data.issueCategory
+        )
+      ) {
+        return res.json({
+          reply: t("Which side?", "أي جهة؟"),
+          options: [t("Left", "اليسار"), t("Right", "اليمين"), t("Both", "كلا الجانبين")]
+        });
+      } else {
+        session.data.issueDetail1 = "";
+        session.step++;
+        return res.json({
+          reply: t("How long has this been happening?", "منذ متى تعاني من هذه الحالة؟")
+        });
+      }
+
+    case 3:
+      session.data.issueDetail1 = message;
+      session.step++;
       return res.json({
-        reply: "أي جهة؟",
-        options: ["اليسار", "اليمين", "كلاهما"]
+        reply: t("How long has this been happening?", "منذ متى تعاني من هذه الحالة؟")
       });
-    }
-    return res.json({
-      reply: "Which side?",
-      options: ["Left", "Right", "Both"]
-    });
 
-  case 3:
-    session.data.issueDetail1 = message;
-    session.step++;
-    if (lang === "ar") {
+    case 4:
+      session.data.issueDetail2 = message;
+      session.step++;
+      return res.json({ reply: t("First name:", "الاسم الأول:") });
+
+    case 5:
+      session.data.firstName = message;
+      session.step++;
+      return res.json({ reply: t("Last name:", "اسم العائلة:") });
+
+    case 6:
+      session.data.lastName = message;
+      session.step++;
+      return res.json({ reply: t("Mobile number:", "رقم الهاتف:") });
+
+    case 7:
+      session.data.phone = message;
+      session.step++;
+      return res.json({ reply: t("Email address (optional):", "البريد الإلكتروني (اختياري):") });
+
+    case 8:
+      session.data.email = message.toLowerCase() === "no" ? "" : message;
+      session.step++;
       return res.json({
-        reply: "منذ متى وأنت تعاني من هذه المشكلة؟ (مثال: يومان)"
+        reply: t(
+          "Would you like to provide more information about your issue?",
+          "هل ترغب في تقديم مزيد من التفاصيل حول مشكلتك؟"
+        ),
+        options: [t("Yes", "نعم"), t("No", "لا")]
       });
-    }
-    return res.json({
-      reply: "How long has this been happening? (e.g. 2 days)"
-    });
 
-  case 4:
-    session.data.issueDetail2 = message;
-    session.step++;
-    return res.json({ reply: lang === "ar" ? "الاسم الأول:" : "First name:" });
+    case 9:
+      if (/yes|نعم/i.test(message)) {
+        session.step++;
+        return res.json({
+          reply: t("Please provide more details:", "يرجى تقديم مزيد من التفاصيل:")
+        });
+      } else {
+        session.data.moreInfo = "";
+        session.step = 11;
+      }
 
-  case 5:
-    session.data.firstName = message;
-    session.step++;
-    return res.json({ reply: lang === "ar" ? "اسم العائلة:" : "Last name:" });
+      if (!/yes|نعم/i.test(message)) {
+        await db.run(
+          `INSERT INTO patients 
+          (firstName,lastName,phone,email,issueCategory,issueDetail1,issueDetail2)
+          VALUES (?,?,?,?,?,?,?)`,
+          [
+            session.data.firstName,
+            session.data.lastName,
+            session.data.phone,
+            session.data.email || "",
+            session.data.issueCategory,
+            session.data.issueDetail1 || "",
+            session.data.issueDetail2 || ""
+          ]
+        );
 
-  case 6:
-    session.data.lastName = message;
-    session.step++;
-    return res.json({ reply: lang === "ar" ? "رقم الهاتف:" : "Mobile number:" });
+        return res.json({
+          reply: t(
+            `Thank you ${session.data.firstName}, our dental team will contact you shortly.`,
+            `شكرًا ${session.data.firstName}، سيتواصل معك فريقنا قريبًا.`
+          )
+        });
+      }
+      break;
 
-  case 7:
-    session.data.phone = message;
-    session.step++;
-    return res.json({ reply: lang === "ar" ? "تاريخ الميلاد (YYYY-MM-DD):" : "Date of birth (YYYY-MM-DD):" });
+    case 10:
+      session.data.moreInfo = message;
+      session.step++;
+      await db.run(
+        `INSERT INTO patients 
+        (firstName,lastName,phone,email,issueCategory,issueDetail1,issueDetail2)
+        VALUES (?,?,?,?,?,?,?)`,
+        [
+          session.data.firstName,
+          session.data.lastName,
+          session.data.phone,
+          session.data.email || "",
+          session.data.issueCategory,
+          session.data.issueDetail1 || "",
+          session.data.issueDetail2 || ""
+        ]
+      );
 
-  case 8:
-    session.data.dob = message;
-    session.step++;
-    if (lang === "ar") {
       return res.json({
-        reply: "هل لديك تأمين صحي؟",
-        options: ["أكسا", "ضمان", "ثيقة", "أخرى", "بدون تأمين"]
+        reply: t(
+          `Thank you ${session.data.firstName}, our dental team will contact you shortly.`,
+          `شكرًا ${session.data.firstName}، سيتواصل معك فريقنا قريبًا.`
+        )
       });
-    }
-    return res.json({
-      reply: "Do you have insurance?",
-      options: ["AXA", "Daman", "Thiqa", "Other", "No insurance"]
-    });
 
-  case 9:
-    session.data.insuranceProvider = message;
-    session.step++;
-    return res.json({ reply: lang === "ar" ? "البريد الإلكتروني (اختياري): أو اكتب 'لا'" : "Email (optional): or type 'no'" });
-
-  case 10:
-    session.data.email = message.toLowerCase() === "no" ? "" : message;
-    session.step++;
-    return res.json({ reply: lang === "ar" ? "في أي منطقة من دبي؟" : "Which area of Dubai are you in?" });
-
-  case 11:
-    session.data.location = message;
-    session.step++;
-
-    await db.run(
-      `INSERT INTO patients 
-      (firstName,lastName,phone,dob,email,insuranceProvider,location,
-      issueCategory,issueDetail1,issueDetail2)
-      VALUES (?,?,?,?,?,?,?,?,?,?)`,
-      [
-        session.data.firstName,
-        session.data.lastName,
-        session.data.phone,
-        session.data.dob,
-        session.data.email,
-        session.data.insuranceProvider,
-        session.data.location,
-        session.data.issueCategory,
-        session.data.issueDetail1,
-        session.data.issueDetail2
-      ]
-    );
-
-    return res.json({
-      reply: lang === "ar"
-        ? `شكرًا لك ${session.data.firstName}، سيتواصل فريق الأسنان لدينا معك قريبًا.`
-        : `Thank you ${session.data.firstName}, our dental team will contact you shortly.`
-    });
-
-  default:
-    return res.json({ reply: lang === "ar" ? "يرجى التحديث للبدء من جديد." : "Please refresh to start again." });
-}
+    default:
+      return res.json({
+        reply: t("Please refresh to start again.", "يرجى التحديث للبدء من جديد.")
+      });
+  }
 });
+
 
 // Simple admin auth (static login for MVP)
 const adminUser = {
