@@ -248,8 +248,8 @@ app.post("/api/chat", async (req, res) => {
         s.data.arch = message; // upper/lower/both/unsure
         s.step = 5;
         return res.json({
-          reply: t("On a scale of 1–10, how strong is the pain?", "من 1 إلى 10، ما شدة الألم؟"),
-          options: ["1","2","3","4","5","6","7","8","9","10"]
+          reply: t("On a scale of 1–5, how strong is the pain?", "من 1 إلى 5، ما شدة الألم؟"),
+          options: ["1","2","3","4","5"]
         });
       }
 
