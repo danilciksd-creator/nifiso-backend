@@ -84,20 +84,20 @@ app.post("/api/chat", async (req, res) => {
   };
 
   switch (s.step) {
-    // STEP 1: choose issue category (first real question)
-    case 1: {
-      s.step = 2;
-      return res.json({
-        reply: t("What is your dental issue?", "ما هي مشكلتك السنية؟"),
-        options: [
-          t("Tooth pain / sensitivity", "ألم أو حساسية في الأسنان"),
-          t("Broken or chipped tooth", "كسر أو تشقق في السن"),
-          t("Swelling or infection", "تورم أو التهاب"),
-          t("Aesthetic treatment", "علاج تجميلي"),
-          t("Routine check-up / cleaning", "فحص روتيني / تنظيف")
-        ]
-      });
-    }
+  // STEP 1: start directly with issue selection (no intro question)
+  case 1: {
+    s.step = 2; // still record progress
+    return res.json({
+      options: [
+        t("Tooth pain / sensitivity", "ألم أو حساسية في الأسنان"),
+        t("Broken or chipped tooth", "كسر أو تشقق في السن"),
+        t("Swelling or infection", "تورم أو التهاب"),
+        t("Aesthetic treatment", "علاج تجميلي"),
+        t("Routine check-up / cleaning", "فحص روتيني / تنظيف")
+      ]
+    });
+  }
+
 
     // STEP 2: branch based on category
     case 2: {
