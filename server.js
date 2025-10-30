@@ -38,6 +38,9 @@ app.get("/", (req, res) => {
   res.send("Nifiso backend with DB + AI is running");
 });
 
+const sessions = {};
+
+
 app.post("/api/chat", async (req, res) => {
   const { message, sessionId, lang = "en" } = req.body;
   if (!sessionId) return res.json({ reply: "Missing session ID" });
@@ -51,6 +54,15 @@ app.post("/api/chat", async (req, res) => {
 
   const session = sessions[sessionId];
   const t = (en, ar) => (lang === "ar" ? ar : en);
+
+const isPainLike = (txt) => {
+  // English keywords
+  const en = /(pain|sensitivity|swelling|infection|chipped)/i.test(txt);
+  // Arabic keywords
+  const ar = /(ألم|حساسية|تورم|التهاب|مكسور|متشقق)/.test(txt);
+  return en || ar;
+};
+
 
   switch (session.step) {
     case 1:
@@ -70,22 +82,19 @@ app.post("/api/chat", async (req, res) => {
       session.data.issueCategory = message;
       session.step++;
 
-      if (
-        /pain|sensitivity|swelling|infection|chipped/i.test(
-          session.data.issueCategory
-        )
-      ) {
-        return res.json({
-          reply: t("Which side?", "أي جهة؟"),
-          options: [t("Left", "اليسار"), t("Right", "اليمين"), t("Both", "كلا الجانبين")]
-        });
-      } else {
-        session.data.issueDetail1 = "";
-        session.step++;
-        return res.json({
-          reply: t("How long has this been happening?", "منذ متى تعاني من هذه الحالة؟")
-        });
-      }
+      if (isPainLike(session.data.issueCategory)) {
+  return res.json({
+    reply: t("Which side?", "أي جهة؟"),
+    options: [t("Left", "اليسار"), t("Right", "اليمين"), t("Both", "كلا الجانبين")]
+  });
+} else {
+  session.data.issueDetail1 = "";
+  session.step++;
+  return res.json({
+    reply: t("How long has this been happening?", "منذ متى تعاني من هذه الحالة؟")
+  });
+}
+
 
     case 3:
       session.data.issueDetail1 = message;
