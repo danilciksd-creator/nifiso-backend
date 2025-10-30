@@ -88,6 +88,7 @@ app.post("/api/chat", async (req, res) => {
   case 1: {
     s.step = 2; // still record progress
     return res.json({
+      reply: t("What is your dental issue?", "ما هي مشكلتك السنية؟"),
       options: [
         t("Tooth pain / sensitivity", "ألم أو حساسية في الأسنان"),
         t("Broken or chipped tooth", "كسر أو تشقق في السن"),
