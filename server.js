@@ -5,7 +5,7 @@ import "dotenv/config";
 import sqlite3 from "sqlite3";
 import { open } from "sqlite";
 
-// Database initialization
+// Database setup
 let db;
 async function initDB() {
   db = await open({
@@ -49,11 +49,7 @@ app.post("/api/chat", async (req, res) => {
   if (!sessionId) return res.json({ reply: "Missing session ID" });
 
   if (!sessions[sessionId]) {
-    sessions[sessionId] = {
-      step: 1,
-      branch: null,
-      data: {}
-    };
+    sessions[sessionId] = { step: 1, branch: null, data: {} };
   }
   const s = sessions[sessionId];
 
@@ -71,11 +67,11 @@ app.post("/api/chat", async (req, res) => {
   };
 
   switch (s.step) {
-    // STEP 1 — greet and ask for issue
+    // STEP 1 — first message to user
     case 1: {
       s.step = 2;
       return res.json({
-        reply: "Hello! What brings you in today? What is your dental issue?",
+        reply: "Hello! What dental issue brings you in today?",
         options: [
           "Tooth pain / sensitivity",
           "Broken or chipped tooth",
@@ -86,9 +82,10 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    // STEP 2 — branch based on issue
+    // STEP 2 — branch selection
     case 2: {
       s.data.issueCategory = message;
+
       if (/pain|sensitivity/i.test(message)) s.branch = "pain";
       else if (/broken|chipped/i.test(message)) s.branch = "broken";
       else if (/swelling|infection/i.test(message)) s.branch = "swelling";
@@ -118,7 +115,7 @@ app.post("/api/chat", async (req, res) => {
       });
     }
 
-    // STEP 3 — follow-up per branch
+    // STEP 3 — branch follow-up
     case 3: {
       if (s.branch === "pain") {
         s.data.side = message;
@@ -152,13 +149,11 @@ app.post("/api/chat", async (req, res) => {
       return res.json({ reply: "How long has this been happening?" });
     }
 
-    // STEP 4 — move to patient info
-    case 4: {
+    // STEP 4 → identity info
+    case 4:
       s.step = 5;
       return res.json({ reply: "First name:" });
-    }
 
-    // STEP 5 — identity
     case 5:
       s.data.firstName = message;
       s.step = 6;
