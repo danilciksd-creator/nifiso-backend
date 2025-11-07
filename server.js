@@ -71,7 +71,7 @@ app.post("/api/chat", async (req, res) => {
     case 1: {
       s.step = 2;
       return res.json({
-        reply: "Hello! What dental issue brings you in today?",
+        reply: "Hello! What dental issue brings you in?",
         options: [
           "Tooth pain / sensitivity",
           "Broken or chipped tooth",
